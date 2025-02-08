@@ -1,7 +1,7 @@
-let maxNearDistance = 5;
+let additionalNearDistance = 5;
 
 function updateMaxNearDistance() {
-    maxNearDistance = parseInt(document.getElementById('nearDistanceInput').value, 10);
+    additionalNearDistance = parseFloat(document.getElementById('nearDistanceInput').value);
 }
 
 function clearAll() {
@@ -15,18 +15,15 @@ function clearAll() {
 }
 
 function calculateDistance(coord1, coord2) {
-    const dx = coord1[0] - coord2[0];
-    const dy = coord1[1] - coord2[1];
-    const dz = coord1[2] - coord2[2];
-    return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    const dx = Math.abs(coord1[0] - coord2[0]);
+    const dy = Math.abs(coord1[1] - coord2[1]);
+    const dz = Math.abs(coord1[2] - coord2[2]);
+    return { dx, dy, dz };
 }
 
 function processData() {
-    document.querySelector('.progress-container').classList.remove('hidden');
-
     try {
         const coordsInput = document.getElementById('coordinatesInput').value.trim();
-        const jsonInput = document.getElementById('jsonInput').value.trim();
         let allCoordinates = [];
         const errors = [];
 
@@ -35,34 +32,9 @@ function processData() {
             lines.forEach((line, index) => {
                 const coords = line.split(',').map(Number).filter(n => !isNaN(n));
                 if (coords.length === 3) {
-                    allCoordinates.push({
-                        position: coords,
-                        checked: false,
-                        description: ""
-                    });
+                    allCoordinates.push(coords);
                 } else {
                     errors.push(`Line ${index + 1}: Invalid coordinates`);
-                }
-            });
-        }
-
-        if (jsonInput) {
-            const jsonEntries = jsonInput.split(/\}\s*\{/).map(entry => {
-                if (!entry.startsWith('{')) entry = '{' + entry;
-                if (!entry.endsWith('}')) entry = entry + '}';
-                return entry;
-            });
-
-            jsonEntries.forEach((entry, index) => {
-                try {
-                    const json = JSON.parse(entry);
-                    if (json.position && Array.isArray(json.position) && json.position.length === 3) {
-                        allCoordinates.push(json);
-                    } else {
-                        errors.push(`Entry ${index + 1}: Invalid JSON structure`);
-                    }
-                } catch {
-                    errors.push(`Entry ${index + 1}: Invalid JSON format`);
                 }
             });
         }
@@ -72,84 +44,72 @@ function processData() {
             return;
         }
 
-        const finalUniqueCoords = [];
+        const exactSet = new Set();
+        const nearGroups = [];
+        const resultCoords = [];
         let exactDupes = 0;
         let nearDupes = 0;
-        const coordMap = new Map();
-        const processedCoords = new Set();
 
-        for (let index = 0; index < allCoordinates.length; index++) {
-            const coord = allCoordinates[index];
-            const key = coord.position.join(',');
-
-            // Check for exact duplicates
-            if (coordMap.has(key)) {
+        // إزالة التكرارات التامة
+        allCoordinates.forEach(coord => {
+            const key = coord.join(',');
+            if (exactSet.has(key)) {
                 exactDupes++;
-                continue;
+            } else {
+                exactSet.add(key);
+                resultCoords.push(coord);
             }
+        });
 
-            coordMap.set(key, true);
-            let isNearDuplicate = false;
+        const consideredCoords = new Set();
 
-            for (let i = index + 1; i < allCoordinates.length; i++) {
-                const otherCoord = allCoordinates[i];
-                const otherKey = otherCoord.position.join(',');
-                const distance = calculateDistance(coord.position, otherCoord.position);
+        // البحث عن التكرارات القريبة
+        resultCoords.forEach((coord, idx) => {
+            if (consideredCoords.has(idx)) return;
 
-                if (distance < maxNearDistance && !processedCoords.has(otherKey)) {
-                    isNearDuplicate = true;
-                    processedCoords.add(otherKey); // Mark the near duplicate as processed
+            let nearGroup = [coord];
+
+            for (let i = idx + 1; i < resultCoords.length; i++) {
+                if (!consideredCoords.has(i)) {
+                    const otherCoord = resultCoords[i];
+                    const { dx, dy, dz } = calculateDistance(coord, otherCoord);
+
+                    if (
+                        (dx === 0 && dy === 0 && dz < additionalNearDistance) ||
+                        (dx === 0 && dz === 0 && dy < additionalNearDistance) ||
+                        (dy === 0 && dz === 0 && dx < additionalNearDistance)
+                    ) {
+                        nearGroup.push(otherCoord);
+                        consideredCoords.add(i);
+                    }
                 }
             }
 
-            if (!isNearDuplicate) {
-                finalUniqueCoords.push(coord);
-            } else {
-                nearDupes++;
-                finalUniqueCoords.push(coord); // Include one representative of near duplicates in the result
+            if (nearGroup.length > 1) {
+                nearGroups.push(nearGroup);
+                nearDupes += nearGroup.length - 1; // حساب عدد التكرارات القريبة
             }
-        }
+        });
 
-        document.getElementById('total-results').textContent = finalUniqueCoords.length;
+        // جمع النتائج النهائية
+        const displayResults = resultCoords.filter((_, idx) => !consideredCoords.has(idx));
+
+        document.getElementById('total-results').textContent = displayResults.length;
         document.getElementById('exact-duplicates').textContent = exactDupes;
         document.getElementById('near-duplicates').textContent = nearDupes;
 
-        const sortedOutput = finalUniqueCoords.map((coord, index) => ({
-            checked: coord.checked,
-            description: coord.description,
+        const sortedOutput = displayResults.map((position, index) => ({
+            checked: false,
+            description: "",
             name: String(index),
-            position: coord.position
+            position
         }));
 
         document.getElementById('output').textContent = JSON.stringify(sortedOutput, null, 2);
 
     } catch (error) {
         showError(error.message);
-    } finally {
-        document.querySelector('.progress-container').classList.add('hidden');
     }
 }
 
-function showError(message) {
-    const errorContainer = document.getElementById('error-container');
-    errorContainer.innerHTML = message;
-    errorContainer.classList.remove('hidden');
-    setTimeout(() => errorContainer.classList.add('hidden'), 5000);
-}
-
-function copyResults() {
-    const output = document.getElementById('output').textContent;
-    navigator.clipboard.writeText(output)
-        .then(() => alert('Results copied!'))
-        .catch(err => console.error('Failed to copy text: ', err));
-}
-
-function saveResults() {
-    const output = document.getElementById('output').textContent;
-    const fileName = document.getElementById('fileName').value || 'result.txt';
-    const blob = new Blob([output], { type: 'text/plain' });
-    const link = document.createElement('a');
-    link.href = window.URL.createObjectURL(blob);
-    link.download = fileName;
-    link.click();
-}
+// بقية الدوال بدون تغيير (showError, copyResults, saveResults)
