@@ -72,11 +72,11 @@ function processData() {
             return;
         }
 
-        let finalUniqueCoords = [];
+        const finalUniqueCoords = [];
         let exactDupes = 0;
         let nearDupes = 0;
         const coordMap = new Map();
-        const nearMap = new Map();
+        const nearMap = new Set();
 
         allCoordinates.forEach((coord, index) => {
             const key = coord.position.join(',');
@@ -85,30 +85,36 @@ function processData() {
                 for (let i = index + 1; i < allCoordinates.length; i++) {
                     const otherCoord = allCoordinates[i];
                     const distance = calculateDistance(coord.position, otherCoord.position);
-                    if (distance < maxNearDistance) {
+                    if (distance < maxNearDistance && !coordMap.has(otherCoord.position.join(','))) {
                         isNearDuplicate = true;
-                        nearMap.set(otherCoord.position.join(','), true);
-                        break;
+                        nearMap.add(otherCoord.position.join(',')); // Add the near duplicate's position to nearMap
                     }
                 }
-                if (!isNearDuplicate && !nearMap.has(key)) {
+                if (!isNearDuplicate) {
                     coordMap.set(key, true);
                     finalUniqueCoords.push(coord);
-                } else {
-                    nearDupes++;
+                } else if (!nearMap.has(key)) {
+                    finalUniqueCoords.push(coord); // Add one instance of the near duplicate
                 }
             } else {
                 exactDupes++;
             }
         });
 
-        nearDupes = Math.ceil(nearDupes / 2); // لأننا نضيف واحدة من القريبات في النتيجة
+        nearDupes = nearMap.size; // Use the size of nearMap for near duplicates
 
         document.getElementById('total-results').textContent = finalUniqueCoords.length;
         document.getElementById('exact-duplicates').textContent = exactDupes;
         document.getElementById('near-duplicates').textContent = nearDupes;
 
-        document.getElementById('output').textContent = JSON.stringify(finalUniqueCoords, null, 2);
+        const sortedOutput = finalUniqueCoords.map((coord, index) => ({
+            checked: coord.checked,
+            description: coord.description,
+            name: String(index),
+            position: coord.position
+        }));
+
+        document.getElementById('output').textContent = JSON.stringify(sortedOutput, null, 2);
 
     } catch (error) {
         showError(error.message);
