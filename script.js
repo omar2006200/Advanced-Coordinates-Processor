@@ -74,37 +74,39 @@ function processData() {
             return;
         }
 
-        // تحديد وتصفية الفريد
-        const finalUniqueCoords = [];
+        let finalUniqueCoords = [];
         let exactDupes = 0;
         let nearDupes = 0;
         const coordMap = new Map();
+        const nearDupSet = new Set();
 
         allCoordinates.forEach((coord, index) => {
             const key = coord.position.join(',');
             if (!coordMap.has(key)) {
-                let isNearDuplicate = false;
+                let hasNearDuplicate = false;
                 for (let i = 0; i < allCoordinates.length; i++) {
-                    if (i !== index) {
+                    if (i !== index && !nearDupSet.has(i)) {
                         const otherCoord = allCoordinates[i];
                         const distance = calculateDistance(coord.position, otherCoord.position);
                         if (distance > 0 && distance < maxNearDistance) {
-                            isNearDuplicate = true;
-                            break;
+                            hasNearDuplicate = true;
+                            nearDupSet.add(i); // نحفظ أن هذا الخيار قريب من آخر
+                            break; // نكتفي بواحدة من القريبات
                         }
                     }
                 }
-                if (!isNearDuplicate) {
+                if (!hasNearDuplicate) {
                     coordMap.set(key, true);
-                    finalUniqueCoords.push(coord);
-                } else {
-                    nearDupes++;
                 }
+                finalUniqueCoords.push(coord);
             } else {
                 exactDupes++;
             }
         });
 
+        nearDupes = nearDupSet.size;
+
+        // حساب النتائج
         document.getElementById('total-results').textContent = finalUniqueCoords.length;
         document.getElementById('exact-duplicates').textContent = exactDupes;
         document.getElementById('near-duplicates').textContent = nearDupes;
