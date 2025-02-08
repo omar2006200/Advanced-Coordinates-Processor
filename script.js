@@ -30,6 +30,7 @@ function processData() {
         let allCoordinates = [];
         const errors = [];
 
+        // معالجة إحداثيات الإدخال
         if (coordsInput) {
             const lines = coordsInput.split('\n').filter(line => line.trim() !== '');
             lines.forEach((line, index) => {
@@ -46,7 +47,9 @@ function processData() {
             });
         }
 
+        // معالجة JSON
         if (jsonInput) {
+            // تحسين معالجة JSON ليقبل الفواصل والفارغات
             const jsonEntries = jsonInput.split(/\}\s*,\s*\{/).map(entry => {
                 if (!entry.startsWith('{')) entry = '{' + entry;
                 if (!entry.endsWith('}')) entry = entry + '}';
@@ -61,17 +64,19 @@ function processData() {
                     } else {
                         errors.push(`Entry ${index + 1}: Invalid JSON structure`);
                     }
-                } catch {
-                    errors.push(`Entry ${index + 1}: Invalid JSON format`);
+                } catch (error) {
+                    errors.push(`Entry ${index + 1}: Invalid JSON format - ${error.message}`);
                 }
             });
         }
 
+        // عرض الأخطاء إذا وجدت
         if (errors.length > 0) {
             showError(errors.join('<br>'));
             return;
         }
 
+        // إزالة التكرارات
         const finalUniqueCoords = [];
         const coordMap = new Map();
         let exactDupes = 0;
@@ -103,10 +108,12 @@ function processData() {
             }
         });
 
+        // تحديث النتائج
         document.getElementById('total-results').textContent = finalUniqueCoords.length;
         document.getElementById('exact-duplicates').textContent = exactDupes;
         document.getElementById('near-duplicates').textContent = nearDupes;
 
+        // إعداد الناتج النهائي
         const sortedOutput = finalUniqueCoords.map((coord, index) => ({
             checked: coord.checked,
             description: coord.description,
