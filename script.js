@@ -39,7 +39,8 @@ function processData() {
                     allCoordinates.push({
                         position: coords,
                         checked: false,
-                        description: ""
+                        description: "",
+                        duplicateType: "unique" // إفتراضيًا غير مكرر
                     });
                 } else {
                     errors.push(`Line ${index + 1}: Invalid coordinates`);
@@ -49,8 +50,8 @@ function processData() {
 
         // معالجة JSON
         if (jsonInput) {
-            // تحسين معالجة JSON ليقبل الفواصل والفارغات
-            const jsonEntries = jsonInput.split(/\}\s*,\s*\{/).map(entry => {
+            // تحسين معالجة JSON ليقبل أكواد بدون فواصل
+            const jsonEntries = jsonInput.split(/\}\s*\{/).map(entry => {
                 if (!entry.startsWith('{')) entry = '{' + entry;
                 if (!entry.endsWith('}')) entry = entry + '}';
                 return entry;
@@ -60,7 +61,10 @@ function processData() {
                 try {
                     const json = JSON.parse(entry);
                     if (json.position && Array.isArray(json.position) && json.position.length === 3) {
-                        allCoordinates.push(json);
+                        allCoordinates.push({
+                            ...json,
+                            duplicateType: "unique" // إفتراضيًا غير مكرر
+                        });
                     } else {
                         errors.push(`Entry ${index + 1}: Invalid JSON structure`);
                     }
@@ -76,49 +80,53 @@ function processData() {
             return;
         }
 
-        // إزالة التكرارات
-        const finalUniqueCoords = [];
-        const coordMap = new Map();
+        // تحديد المتطابقات والمكررات
+        const finalCoords = [];
         let exactDupes = 0;
         let nearDupes = 0;
-        const isNearDupSet = new Set();
 
         allCoordinates.forEach((coord, index) => {
-            const key = coord.position.join(',');
-            if (!coordMap.has(key)) {
-                let isNearDuplicate = false;
-                for (let i = 0; i < allCoordinates.length; i++) {
-                    if (i !== index && !isNearDupSet.has(i)) {
-                        const otherCoord = allCoordinates[i];
-                        const distance = calculateDistance(coord.position, otherCoord.position);
-                        if (distance < maxNearDistance) {
-                            isNearDuplicate = true;
-                            isNearDupSet.add(i);
-                        }
+            let isExactDuplicate = false;
+            let isNearDuplicate = false;
+
+            for (let i = 0; i < allCoordinates.length; i++) {
+                if (i !== index) {
+                    const otherCoord = allCoordinates[i];
+                    const distance = calculateDistance(coord.position, otherCoord.position);
+
+                    // تحديد التطابق التام
+                    if (distance === 0) {
+                        isExactDuplicate = true;
+                    }
+
+                    // تحديد التطابق القريب
+                    if (distance > 0 && distance < maxNearDistance) {
+                        isNearDuplicate = true;
                     }
                 }
-                if (!isNearDuplicate) {
-                    coordMap.set(key, true);
-                    finalUniqueCoords.push(coord);
-                } else {
-                    nearDupes++;
-                }
-            } else {
-                exactDupes++;
             }
+
+            // تحديث نوع التكرار
+            if (isExactDuplicate) {
+                coord.duplicateType = "exact";
+                exactDupes++;
+            } else if (isNearDuplicate) {
+                coord.duplicateType = "near";
+                nearDupes++;
+            }
+
+            finalCoords.push(coord);
         });
 
         // تحديث النتائج
-        document.getElementById('total-results').textContent = finalUniqueCoords.length;
+        document.getElementById('total-results').textContent = finalCoords.length;
         document.getElementById('exact-duplicates').textContent = exactDupes;
         document.getElementById('near-duplicates').textContent = nearDupes;
 
         // إعداد الناتج النهائي
-        const sortedOutput = finalUniqueCoords.map((coord, index) => ({
-            checked: coord.checked,
-            description: coord.description,
-            name: String(index),
-            position: coord.position
+        const sortedOutput = finalCoords.map((coord, index) => ({
+            ...coord,
+            name: String(index)
         }));
 
         document.getElementById('output').textContent = JSON.stringify(sortedOutput, null, 2);
