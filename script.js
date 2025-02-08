@@ -76,43 +76,39 @@ function processData() {
         let exactDupes = 0;
         let nearDupes = 0;
         const coordMap = new Map();
-        const seenNearGroups = new Set();
+        const processedCoords = new Set();
 
-        allCoordinates.forEach((coord, index) => {
+        for (let index = 0; index < allCoordinates.length; index++) {
+            const coord = allCoordinates[index];
             const key = coord.position.join(',');
-            
+
+            // Check for exact duplicates
             if (coordMap.has(key)) {
                 exactDupes++;
-                return;
+                continue;
             }
 
             coordMap.set(key, true);
             let isNearDuplicate = false;
-            const nearGroup = [];
 
             for (let i = index + 1; i < allCoordinates.length; i++) {
                 const otherCoord = allCoordinates[i];
-                if (calculateDistance(coord.position, otherCoord.position) < maxNearDistance) {
+                const otherKey = otherCoord.position.join(',');
+                const distance = calculateDistance(coord.position, otherCoord.position);
+
+                if (distance < maxNearDistance && !processedCoords.has(otherKey)) {
                     isNearDuplicate = true;
-                    nearGroup.push(otherCoord.position.join(','));
+                    processedCoords.add(otherKey); // Mark the near duplicate as processed
                 }
             }
 
-            if (isNearDuplicate) {
-                if (!seenNearGroups.has(key) && nearGroup.length > 0) {
-                    seenNearGroups.add(key);
-                    nearGroup.forEach(g => seenNearGroups.add(g));
-                    nearDupes++;
-                }
-            } else {
+            if (!isNearDuplicate) {
                 finalUniqueCoords.push(coord);
+            } else {
+                nearDupes++;
+                finalUniqueCoords.push(coord); // Include one representative of near duplicates in the result
             }
-        });
-
-        finalUniqueCoords.push(...Array.from(seenNearGroups).map(key => {
-            const [x, y, z] = key.split(',').map(Number);
-            return { position: [x, y, z], checked: false, description: "" };
-        }));
+        }
 
         document.getElementById('total-results').textContent = finalUniqueCoords.length;
         document.getElementById('exact-duplicates').textContent = exactDupes;
