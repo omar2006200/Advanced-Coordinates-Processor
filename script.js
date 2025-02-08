@@ -76,7 +76,7 @@ function processData() {
         let exactDupes = 0;
         let nearDupes = 0;
         const coordMap = new Map();
-        const nearMap = new Set();
+        const seenNearGroups = new Set();
 
         allCoordinates.forEach((coord, index) => {
             const key = coord.position.join(',');
@@ -86,24 +86,33 @@ function processData() {
                 return;
             }
 
+            coordMap.set(key, true);
             let isNearDuplicate = false;
+            const nearGroup = [];
+
             for (let i = index + 1; i < allCoordinates.length; i++) {
                 const otherCoord = allCoordinates[i];
-                const distance = calculateDistance(coord.position, otherCoord.position);
-                if (distance < maxNearDistance) {
+                if (calculateDistance(coord.position, otherCoord.position) < maxNearDistance) {
                     isNearDuplicate = true;
-                    nearMap.add(otherCoord.position.join(',')); // Track near duplicates separately
+                    nearGroup.push(otherCoord.position.join(','));
                 }
             }
 
-            coordMap.set(key, true);
-
-            if (!nearMap.has(key)) {
+            if (isNearDuplicate) {
+                if (!seenNearGroups.has(key) && nearGroup.length > 0) {
+                    seenNearGroups.add(key);
+                    nearGroup.forEach(g => seenNearGroups.add(g));
+                    nearDupes++;
+                }
+            } else {
                 finalUniqueCoords.push(coord);
             }
         });
 
-        nearDupes = nearMap.size; // Calculate near duplicates from tracked values
+        finalUniqueCoords.push(...Array.from(seenNearGroups).map(key => {
+            const [x, y, z] = key.split(',').map(Number);
+            return { position: [x, y, z], checked: false, description: "" };
+        }));
 
         document.getElementById('total-results').textContent = finalUniqueCoords.length;
         document.getElementById('exact-duplicates').textContent = exactDupes;
