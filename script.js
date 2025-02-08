@@ -80,28 +80,30 @@ function processData() {
 
         allCoordinates.forEach((coord, index) => {
             const key = coord.position.join(',');
-            if (!coordMap.has(key)) {
-                let isNearDuplicate = false;
-                for (let i = index + 1; i < allCoordinates.length; i++) {
-                    const otherCoord = allCoordinates[i];
-                    const distance = calculateDistance(coord.position, otherCoord.position);
-                    if (distance < maxNearDistance && !coordMap.has(otherCoord.position.join(','))) {
-                        isNearDuplicate = true;
-                        nearMap.add(otherCoord.position.join(',')); // Add the near duplicate's position to nearMap
-                    }
-                }
-                if (!isNearDuplicate) {
-                    coordMap.set(key, true);
-                    finalUniqueCoords.push(coord);
-                } else if (!nearMap.has(key)) {
-                    finalUniqueCoords.push(coord); // Add one instance of the near duplicate
-                }
-            } else {
+            
+            if (coordMap.has(key)) {
                 exactDupes++;
+                return;
+            }
+
+            let isNearDuplicate = false;
+            for (let i = index + 1; i < allCoordinates.length; i++) {
+                const otherCoord = allCoordinates[i];
+                const distance = calculateDistance(coord.position, otherCoord.position);
+                if (distance < maxNearDistance) {
+                    isNearDuplicate = true;
+                    nearMap.add(otherCoord.position.join(',')); // Track near duplicates separately
+                }
+            }
+
+            coordMap.set(key, true);
+
+            if (!nearMap.has(key)) {
+                finalUniqueCoords.push(coord);
             }
         });
 
-        nearDupes = nearMap.size; // Use the size of nearMap for near duplicates
+        nearDupes = nearMap.size; // Calculate near duplicates from tracked values
 
         document.getElementById('total-results').textContent = finalUniqueCoords.length;
         document.getElementById('exact-duplicates').textContent = exactDupes;
