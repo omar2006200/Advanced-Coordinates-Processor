@@ -30,7 +30,6 @@ function processData() {
         let allCoordinates = [];
         const errors = [];
 
-        // معالجة إحداثيات الإدخال
         if (coordsInput) {
             const lines = coordsInput.split('\n').filter(line => line.trim() !== '');
             lines.forEach((line, index) => {
@@ -47,7 +46,6 @@ function processData() {
             });
         }
 
-        // معالجة JSON
         if (jsonInput) {
             const jsonEntries = jsonInput.split(/\}\s*\{/).map(entry => {
                 if (!entry.startsWith('{')) entry = '{' + entry;
@@ -78,35 +76,30 @@ function processData() {
         let exactDupes = 0;
         let nearDupes = 0;
         const coordMap = new Map();
-        const nearDupSet = new Set();
 
         allCoordinates.forEach((coord, index) => {
             const key = coord.position.join(',');
             if (!coordMap.has(key)) {
-                let hasNearDuplicate = false;
-                for (let i = 0; i < allCoordinates.length; i++) {
-                    if (i !== index && !nearDupSet.has(i)) {
-                        const otherCoord = allCoordinates[i];
-                        const distance = calculateDistance(coord.position, otherCoord.position);
-                        if (distance > 0 && distance < maxNearDistance) {
-                            hasNearDuplicate = true;
-                            nearDupSet.add(i); // نحفظ أن هذا الخيار قريب من آخر
-                            break; // نكتفي بواحدة من القريبات
-                        }
+                let isNearDuplicate = false;
+                for (let i = index + 1; i < allCoordinates.length; i++) {
+                    const otherCoord = allCoordinates[i];
+                    const distance = calculateDistance(coord.position, otherCoord.position);
+                    if (distance < maxNearDistance) {
+                        isNearDuplicate = true;
+                        break;
                     }
                 }
-                if (!hasNearDuplicate) {
+                if (!isNearDuplicate) {
                     coordMap.set(key, true);
+                    finalUniqueCoords.push(coord);
+                } else {
+                    nearDupes++;
                 }
-                finalUniqueCoords.push(coord);
             } else {
                 exactDupes++;
             }
         });
 
-        nearDupes = nearDupSet.size;
-
-        // حساب النتائج
         document.getElementById('total-results').textContent = finalUniqueCoords.length;
         document.getElementById('exact-duplicates').textContent = exactDupes;
         document.getElementById('near-duplicates').textContent = nearDupes;
