@@ -76,6 +76,7 @@ function processData() {
         let exactDupes = 0;
         let nearDupes = 0;
         const coordMap = new Map();
+        const nearMap = new Map();
 
         allCoordinates.forEach((coord, index) => {
             const key = coord.position.join(',');
@@ -86,10 +87,11 @@ function processData() {
                     const distance = calculateDistance(coord.position, otherCoord.position);
                     if (distance < maxNearDistance) {
                         isNearDuplicate = true;
+                        nearMap.set(otherCoord.position.join(','), true);
                         break;
                     }
                 }
-                if (!isNearDuplicate) {
+                if (!isNearDuplicate && !nearMap.has(key)) {
                     coordMap.set(key, true);
                     finalUniqueCoords.push(coord);
                 } else {
@@ -99,6 +101,8 @@ function processData() {
                 exactDupes++;
             }
         });
+
+        nearDupes = Math.ceil(nearDupes / 2); // لأننا نضيف واحدة من القريبات في النتيجة
 
         document.getElementById('total-results').textContent = finalUniqueCoords.length;
         document.getElementById('exact-duplicates').textContent = exactDupes;
