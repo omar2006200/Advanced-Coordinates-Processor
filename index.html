@@ -10,84 +10,51 @@
     <div class="container">
         <h1>Advanced Coordinates Processor</h1>
 
-        <!-- قسم اختيار الوظائف -->
         <div class="function-selection">
-            <label>
-                <input type="checkbox" id="mergeOption" checked>
-                Merge Coordinates
-            </label>
-            <label>
-                <input type="checkbox" id="removeDuplicatesOption" checked>
-                Remove Duplicates
-            </label>
-            <label>
-                <input type="checkbox" id="nearDuplicatesOption" checked>
-                Remove Near Duplicates (Max Distance)
-            </label>
-            <input type="number" id="nearDistanceInput" min="0" max="50" value="5" style="width: 60px; margin-left: 10px;" disabled>
-            <span>meters</span> <!-- إضافة وحدة القياس -->
-            
-            <!-- إضافة قائمة اختيار المعيار -->
-            <select id="selectionMethod" style="margin-left: 10px;">
+            <label><input type="checkbox" id="mergeOption" checked> Merge Coordinates</label>
+            <label><input type="checkbox" id="removeDuplicatesOption" checked> Remove Duplicates</label>
+            <label><input type="checkbox" id="nearDuplicatesOption" checked> Remove Near Duplicates</label>
+            <input type="number" id="nearDistanceInput" min="0" max="50" value="5" disabled>
+            <span>meters</span>
+            <select id="selectionMethod">
                 <option value="first">First in Group</option>
                 <option value="highestY">Highest Y</option>
                 <option value="closestToAvg">Closest to Avg</option>
             </select>
         </div>
 
-        <!-- قسم إدخال البيانات -->
         <div class="grid-container">
             <div class="input-group">
                 <label>Coordinates:</label>
-                <textarea id="coordinatesInput" rows="4" placeholder='1237.54, 352.04, 1588.85'></textarea>
+                <textarea id="coordinatesInput" rows="4"></textarea>
             </div>
             <div class="input-group">
                 <label>JSON Code:</label>
-                <textarea id="jsonInput" rows="4" placeholder='{"checked":false,"description":"","name":"","position":[]}'></textarea>
+                <textarea id="jsonInput" rows="4"></textarea>
             </div>
         </div>
 
-        <!-- قسم معالجة البيانات -->
         <div class="processing-section">
             <button class="process-btn" onclick="processData()">Start Processing</button>
         </div>
 
-        <!-- قسم الأزرار الإضافية -->
         <div class="actions-section">
             <button class="clear-btn" onclick="clearAll()">Clear All</button>
             <button class="copy-btn" onclick="copyResults()">Copy Results</button>
         </div>
 
-        <!-- قسم شريط التقدم -->
-        <div class="progress-container hidden">
-            <div class="progress-bar">
-                <div id="progress" class="progress"></div>
-            </div>
-            <span id="progress-text">0%</span>
-        </div>
-
-        <!-- قسم عرض المعلومات -->
         <div class="info-panel">
-            <div class="info-item">
-                Total Results: <span id="total-results">0</span>
-            </div>
-            <div class="info-item">
-                Exact Duplicates: <span id="exact-duplicates">0</span>
-            </div>
-            <div class="info-item">
-                Near Duplicates: <span id="near-duplicates">0</span>
-            </div>
+            <div class="info-item">Total Results: <span id="total-results">0</span></div>
+            <div class="info-item">Exact Duplicates: <span id="exact-duplicates">0</span></div>
+            <div class="info-item">Near Duplicates: <span id="near-duplicates">0</span></div>
         </div>
 
-        <!-- قسم عرض الأخطاء -->
         <div id="error-container" class="hidden"></div>
 
-        <!-- قسم عرض النتائج -->
         <div class="output-section">
             <h3>Final Result:</h3>
             <pre id="output"></pre>
-            <label for="fileName">File Name:</label>
-            <input type="text" id="fileName" placeholder="result.txt" />
+            <label>File Name: <input type="text" id="fileName" placeholder="result.txt"></label>
             <button class="save-btn" onclick="saveResults()">Save as TXT</button>
         </div>
     </div>
