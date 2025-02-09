@@ -65,6 +65,21 @@ const parseJSONInput = (jsonInput) => {
     }
 };
 
+// تطبيق طريقة الاختيار على المجموعات القريبة
+const applySelectionMethod = (group, method) => {
+    if (method === 'highestY') {
+        return group.reduce((a, b) => (a[1] > b[1] ? a : b));
+    } else if (method === 'closestToAvg') {
+        const avgY = group.reduce((sum, c) => sum + c[1], 0) / group.length;
+        return group.reduce((a, b) => 
+            Math.abs(a[1] - avgY) < Math.abs(b[1] - avgY) ? a : b
+        );
+    } else {
+        // First in Group
+        return group[0];
+    }
+};
+
 // المعالجة الرئيسية
 const processData = () => {
     try {
@@ -127,16 +142,7 @@ const processData = () => {
             nearCount = nearGroups.reduce((sum, g) => sum + g.length - 1, 0);
 
             const method = document.getElementById('selectionMethod').value;
-            const selected = nearGroups.map(group => {
-                if (method === 'highestY') return group.reduce((a, b) => a[1] > b[1] ? a : b);
-                if (method === 'closestToAvg') {
-                    const avgY = group.reduce((sum, c) => sum + c[1], 0) / group.length;
-                    return group.reduce((a, b) => 
-                        Math.abs(a[1] - avgY) < Math.abs(b[1] - avgY) ? a : b
-                    );
-                }
-                return group[0];
-            });
+            const selected = nearGroups.map(group => applySelectionMethod(group, method));
 
             resultCoords = [...selected, ...resultCoords.filter(c => 
                 !nearGroups.some(g => g.includes(c))
@@ -144,13 +150,6 @@ const processData = () => {
         } else {
             nearCount = 0;
         }
-
-        // ترتيب النتائج حسب الأقرب
-        resultCoords.sort((a, b) => {
-            const distA = Math.sqrt(a[0] ** 2 + a[1] ** 2 + a[2] ** 2);
-            const distB = Math.sqrt(b[0] ** 2 + b[1] ** 2 + b[2] ** 2);
-            return distA - distB;
-        });
 
         // تحديث النتائج
         document.getElementById('total-results').textContent = resultCoords.length;
