@@ -8,55 +8,78 @@
 </head>
 <body>
     <div class="container">
-        <h1>Advanced Coordinates Processor</h1>
+        <header>
+            <h1>Geo Processor Pro</h1>
+            <p>Advanced tool for processing and optimizing geographic coordinates.</p>
+        </header>
 
-        <div class="function-selection">
-            <label><input type="checkbox" id="mergeOption" checked> Merge Coordinates</label>
-            <label><input type="checkbox" id="removeDuplicatesOption" checked> Remove Duplicates</label>
-            <label><input type="checkbox" id="nearDuplicatesOption" checked> Remove Near Duplicates</label>
-            <input type="number" id="nearDistanceInput" min="0" max="50" value="5" disabled>
-            <span>meters</span>
-            <select id="selectionMethod">
-                <option value="first">First in Group</option>
-                <option value="highestY">Highest Y</option>
-                <option value="closestToAvg">Closest to Avg</option>
-            </select>
-        </div>
-
-        <div class="grid-container">
-            <div class="input-group">
-                <label>Coordinates:</label>
-                <textarea id="coordinatesInput" rows="4"></textarea>
+        <section class="controls">
+            <div class="options">
+                <h2>Processing Options</h2>
+                <div class="option-group">
+                    <label><input type="checkbox" id="mergeOption" checked> Merge Coordinates</label>
+                    <label><input type="checkbox" id="removeDuplicatesOption" checked> Remove Exact Duplicates</label>
+                    <label><input type="checkbox" id="nearDuplicatesOption" checked> Remove Near Duplicates</label>
+                    <div class="near-distance">
+                        <input type="number" id="nearDistanceInput" min="0" max="50" value="5" disabled>
+                        <span>meters</span>
+                    </div>
+                </div>
+                <div class="selection-method">
+                    <label for="selectionMethod">Selection Method:</label>
+                    <select id="selectionMethod">
+                        <option value="first">First in Group</option>
+                        <option value="highestY">Highest Y</option>
+                        <option value="closestToAvg">Closest to Average</option>
+                    </select>
+                </div>
             </div>
-            <div class="input-group">
-                <label>JSON Code:</label>
-                <textarea id="jsonInput" rows="4"></textarea>
+
+            <div class="input-section">
+                <div class="input-group">
+                    <label for="coordinatesInput">Coordinates:</label>
+                    <textarea id="coordinatesInput" rows="6" placeholder="Enter coordinates (e.g., 1049.48, 343.04, -498.35)..."></textarea>
+                </div>
+                <div class="input-group">
+                    <label for="jsonInput">JSON Input:</label>
+                    <textarea id="jsonInput" rows="6" placeholder="Enter JSON array with positions..."></textarea>
+                </div>
             </div>
-        </div>
+        </section>
 
-        <div class="processing-section">
-            <button class="process-btn" onclick="processData()">Start Processing</button>
-        </div>
+        <section class="actions">
+            <button class="btn process-btn" onclick="processData()">Process Data</button>
+            <button class="btn clear-btn" onclick="clearAll()">Clear All</button>
+            <button class="btn copy-btn" onclick="copyResults()">Copy Results</button>
+        </section>
 
-        <div class="actions-section">
-            <button class="clear-btn" onclick="clearAll()">Clear All</button>
-            <button class="copy-btn" onclick="copyResults()">Copy Results</button>
-        </div>
-
-        <div class="info-panel">
-            <div class="info-item">Total Results: <span id="total-results">0</span></div>
-            <div class="info-item">Exact Duplicates: <span id="exact-duplicates">0</span></div>
-            <div class="info-item">Near Duplicates: <span id="near-duplicates">0</span></div>
-        </div>
+        <section class="results">
+            <h2>Results</h2>
+            <div class="stats">
+                <div class="stat-item">
+                    <span class="stat-label">Total Results:</span>
+                    <span class="stat-value" id="total-results">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Exact Duplicates:</span>
+                    <span class="stat-value" id="exact-duplicates">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Near Duplicates:</span>
+                    <span class="stat-value" id="near-duplicates">0</span>
+                </div>
+            </div>
+            <div class="output">
+                <pre id="output"></pre>
+            </div>
+            <div class="save-section">
+                <label for="fileName">File Name:</label>
+                <input type="text" id="fileName" placeholder="result.txt">
+                <button class="btn save-btn" onclick="saveResults()">Save as TXT</button>
+            </div>
+        </section>
 
         <div id="error-container" class="hidden"></div>
-
-        <div class="output-section">
-            <h3>Final Result:</h3>
-            <pre id="output"></pre>
-            <label>File Name: <input type="text" id="fileName" placeholder="result.txt"></label>
-            <button class="save-btn" onclick="saveResults()">Save as TXT</button>
-        </div>
     </div>
 
     <script src="script.js"></script>
