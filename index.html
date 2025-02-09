@@ -10,6 +10,7 @@
     <div class="container">
         <h1>Advanced Coordinates Processor</h1>
 
+        <!-- قسم اختيار الوظائف -->
         <div class="function-selection">
             <label>
                 <input type="checkbox" id="mergeOption" checked>
@@ -23,9 +24,18 @@
                 <input type="checkbox" id="nearDuplicatesOption" checked>
                 Remove Near Duplicates (Max Distance)
             </label>
-            <input type="number" id="nearDistanceInput" min="0" max="50" value="5" style="width: 60px; margin-left: 10px;" onchange="updateMaxNearDistance()">
+            <input type="number" id="nearDistanceInput" min="0" max="50" value="5" style="width: 60px; margin-left: 10px;" disabled>
+            <span>meters</span> <!-- إضافة وحدة القياس -->
+            
+            <!-- إضافة قائمة اختيار المعيار -->
+            <select id="selectionMethod" style="margin-left: 10px;">
+                <option value="first">First in Group</option>
+                <option value="highestY">Highest Y</option>
+                <option value="closestToAvg">Closest to Avg</option>
+            </select>
         </div>
 
+        <!-- قسم إدخال البيانات -->
         <div class="grid-container">
             <div class="input-group">
                 <label>Coordinates:</label>
@@ -37,15 +47,18 @@
             </div>
         </div>
 
+        <!-- قسم معالجة البيانات -->
         <div class="processing-section">
             <button class="process-btn" onclick="processData()">Start Processing</button>
         </div>
 
+        <!-- قسم الأزرار الإضافية -->
         <div class="actions-section">
             <button class="clear-btn" onclick="clearAll()">Clear All</button>
             <button class="copy-btn" onclick="copyResults()">Copy Results</button>
         </div>
 
+        <!-- قسم شريط التقدم -->
         <div class="progress-container hidden">
             <div class="progress-bar">
                 <div id="progress" class="progress"></div>
@@ -53,6 +66,7 @@
             <span id="progress-text">0%</span>
         </div>
 
+        <!-- قسم عرض المعلومات -->
         <div class="info-panel">
             <div class="info-item">
                 Total Results: <span id="total-results">0</span>
@@ -65,8 +79,10 @@
             </div>
         </div>
 
+        <!-- قسم عرض الأخطاء -->
         <div id="error-container" class="hidden"></div>
 
+        <!-- قسم عرض النتائج -->
         <div class="output-section">
             <h3>Final Result:</h3>
             <pre id="output"></pre>
