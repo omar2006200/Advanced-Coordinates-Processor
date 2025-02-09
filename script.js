@@ -3,12 +3,13 @@ let additionalNearDistance = 5;
 // تحويل الإحداثيات إلى مفتاح نصي
 const toKey = (coord) => coord.map(n => n.toFixed(2)).join(',');
 
-// حساب المسافة بين إحداثيتين
-const calculateDistance = (c1, c2) => ({
-    dx: Math.abs(c1[0] - c2[0]),
-    dy: Math.abs(c1[1] - c2[1]),
-    dz: Math.abs(c1[2] - c2[2])
-});
+// حساب المسافة الإقليدية بين إحداثيتين
+const calculateEuclideanDistance = (c1, c2) => {
+    const dx = c1[0] - c2[0];
+    const dy = c1[1] - c2[1];
+    const dz = c1[2] - c2[2];
+    return Math.sqrt(dx * dx + dy * dy + dz * dz);
+};
 
 // البحث عن المجموعات القريبة
 const findNearGroups = (coords, maxDist) => {
@@ -24,14 +25,8 @@ const findNearGroups = (coords, maxDist) => {
         for (let j = i + 1; j < coords.length; j++) {
             if (processed.has(j)) continue;
 
-            const { dx, dy, dz } = calculateDistance(coords[i], coords[j]);
-            const isNear = (
-                (dx === 0 && dy === 0 && dz < maxDist && dz !== 0) ||
-                (dx === 0 && dz === 0 && dy < maxDist && dy !== 0) ||
-                (dy === 0 && dz === 0 && dx < maxDist && dx !== 0)
-            );
-
-            if (isNear) {
+            const distance = calculateEuclideanDistance(coords[i], coords[j]);
+            if (distance <= maxDist) {
                 group.push(coords[j]);
                 processed.add(j);
             }
@@ -150,6 +145,13 @@ const processData = () => {
         } else {
             nearCount = 0;
         }
+
+        // ترتيب النتائج حسب قرب الإحداثيات من بعضها البعض
+        resultCoords.sort((a, b) => {
+            const distanceA = calculateEuclideanDistance(a, [0, 0, 0]); // المسافة من نقطة الأصل
+            const distanceB = calculateEuclideanDistance(b, [0, 0, 0]);
+            return distanceA - distanceB;
+        });
 
         // تحديث النتائج
         document.getElementById('total-results').textContent = resultCoords.length;
