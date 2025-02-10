@@ -11,7 +11,7 @@ const calculateEuclideanDistance = (c1, c2) => {
     return Math.sqrt(dx * dx + dy * dy + dz * dz);
 };
 
-// البحث عن المجموعات القريبة
+// البحث عن المجموعات القريبة (باستثناء التكرارات التامة)
 const findNearGroups = (coords, maxDist) => {
     const groups = [];
     const processed = new Set();
@@ -26,7 +26,7 @@ const findNearGroups = (coords, maxDist) => {
             if (processed.has(j)) continue;
 
             const distance = calculateEuclideanDistance(coords[i], coords[j]);
-            if (distance <= maxDist) {
+            if (distance > 0 && distance <= maxDist) { 
                 group.push(coords[j]);
                 processed.add(j);
             }
@@ -41,38 +41,64 @@ const findNearGroups = (coords, maxDist) => {
 // معالجة JSON Input
 const parseJSONInput = (jsonInput) => {
     try {
-        // إصلاح الصيغة لتحويلها إلى مصفوفة JSON صالحة
         const fixedInput = jsonInput
-            .replace(/\s*}\s*{\s*/g, '},{') // إصلاح الفواصل بين الكائنات
-            .replace(/^\s*\[?\s*/, '[') // إضافة أقواس المصفوفة إذا لم تكن موجودة
+            .replace(/\s*}\s*{\s*/g, '},{')
+            .replace(/^\s*\[?\s*/, '[')
             .replace(/\s*\]?\s*$/, ']');
 
         const jsonArray = JSON.parse(fixedInput);
-
-        // استخراج الإحداثيات
-        const coords = jsonArray
-            .filter(item => item.position && item.position.length === 3)
-            .map(item => item.position.map(Number));
-
-        return coords;
+        return jsonArray
+            .filter(item => item.position?.length === 3)
+            .map(item => ({
+                name: item.name || "Unnamed",
+                description: item.description || "",
+                position: item.position.map(Number)
+            }));
     } catch (e) {
-        throw new Error(`Invalid JSON format: ${e.message}`);
+        throw new Error(`JSON Error: ${e.message}`);
     }
 };
 
 // تطبيق طريقة الاختيار على المجموعات القريبة
 const applySelectionMethod = (group, method) => {
-    if (method === 'highestY') {
-        return group.reduce((a, b) => (a[1] > b[1] ? a : b));
-    } else if (method === 'closestToAvg') {
-        const avgY = group.reduce((sum, c) => sum + c[1], 0) / group.length;
-        return group.reduce((a, b) => 
-            Math.abs(a[1] - avgY) < Math.abs(b[1] - avgY) ? a : b
-        );
-    } else {
-        // First in Group
-        return group[0];
+    switch (method) {
+        case 'highestY':
+            return group.reduce((a, b) => (a.position[1] > b.position[1] ? a : b));
+        case 'closestToAvg':
+            const avgY = group.reduce((sum, c) => sum + c.position[1], 0) / group.length;
+            return group.reduce((a, b) => 
+                Math.abs(a.position[1] - avgY) < Math.abs(b.position[1] - avgY) ? a : b
+            );
+        default:
+            return group[0]; // First in Group
     }
+};
+
+// ترتيب النتائج حسب قرب الإحداثيات من بعضها البعض
+const sortByProximity = (coords) => {
+    if (coords.length === 0) return coords;
+
+    const sortedCoords = [coords[0]];
+    const remainingCoords = [...coords.slice(1)];
+
+    while (remainingCoords.length > 0) {
+        const lastCoord = sortedCoords[sortedCoords.length - 1];
+        let closestIndex = 0;
+        let closestDistance = calculateEuclideanDistance(lastCoord.position, remainingCoords[0].position);
+
+        for (let i = 1; i < remainingCoords.length; i++) {
+            const distance = calculateEuclideanDistance(lastCoord.position, remainingCoords[i].position);
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestIndex = i;
+            }
+        }
+
+        sortedCoords.push(remainingCoords[closestIndex]);
+        remainingCoords.splice(closestIndex, 1);
+    }
+
+    return sortedCoords;
 };
 
 // المعالجة الرئيسية
@@ -86,8 +112,7 @@ const processData = () => {
             const jsonInput = document.getElementById('jsonInput').value.trim();
             if (jsonInput) {
                 try {
-                    const jsonCoords = parseJSONInput(jsonInput);
-                    allCoords.push(...jsonCoords);
+                    allCoords.push(...parseJSONInput(jsonInput));
                 } catch (e) {
                     errors.push(`JSON Error: ${e.message}`);
                 }
@@ -99,8 +124,15 @@ const processData = () => {
         if (textCoords) {
             textCoords.split('\n').forEach((line, idx) => {
                 const coords = line.split(',').map(Number).filter(n => !isNaN(n));
-                if (coords.length === 3) allCoords.push(coords);
-                else errors.push(`Line ${idx + 1}: Invalid format`);
+                if (coords.length === 3) {
+                    allCoords.push({
+                        name: `Point ${idx + 1}`,
+                        description: "",
+                        position: coords
+                    });
+                } else {
+                    errors.push(`Line ${idx + 1}: Invalid format`);
+                }
             });
         }
 
@@ -113,56 +145,55 @@ const processData = () => {
         let exactCount = 0;
         let nearCount = 0;
 
-        // التكرارات التامة
+        // إزالة التكرارات التامة (إذا مفعّل)
         if (document.getElementById('removeDuplicatesOption').checked) {
             const seen = new Set();
-            const duplicates = new Set();
             resultCoords = resultCoords.filter(coord => {
-                const key = toKey(coord);
+                const key = toKey(coord.position);
                 if (seen.has(key)) {
-                    duplicates.add(key);
                     exactCount++;
                     return false;
                 }
                 seen.add(key);
                 return true;
             });
-        } else {
-            exactCount = 0;
         }
 
-        // التكرارات القريبة
+        // إزالة التكرارات القريبة (إذا مفعّل)
         if (document.getElementById('nearDuplicatesOption').checked) {
-            const nearGroups = findNearGroups(resultCoords, additionalNearDistance);
+            const positions = resultCoords.map(c => c.position);
+            const nearGroups = findNearGroups(positions, additionalNearDistance);
             nearCount = nearGroups.reduce((sum, g) => sum + g.length - 1, 0);
 
             const method = document.getElementById('selectionMethod').value;
-            const selected = nearGroups.map(group => applySelectionMethod(group, method));
+            const selected = nearGroups.map(group => {
+                const groupObjects = group.map(pos => 
+                    resultCoords.find(c => toKey(c.position) === toKey(pos))
+                );
+                return applySelectionMethod(groupObjects, method);
+            });
 
-            resultCoords = [...selected, ...resultCoords.filter(c => 
-                !nearGroups.some(g => g.includes(c))
-            )];
-        } else {
-            nearCount = 0;
+            resultCoords = [
+                ...selected,
+                ...resultCoords.filter(c => 
+                    !nearGroups.some(g => g.some(pos => toKey(pos) === toKey(c.position)))
+                )
+            ];
         }
 
-        // ترتيب النتائج حسب قرب الإحداثيات من بعضها البعض
-        resultCoords.sort((a, b) => {
-            const distanceA = calculateEuclideanDistance(a, [0, 0, 0]); // المسافة من نقطة الأصل
-            const distanceB = calculateEuclideanDistance(b, [0, 0, 0]);
-            return distanceA - distanceB;
-        });
+        // ترتيب النتائج حسب القرب
+        resultCoords = sortByProximity(resultCoords);
 
-        // تحديث النتائج
+        // تحديث النتائج مع إعادة ترقيم الأسماء
         document.getElementById('total-results').textContent = resultCoords.length;
         document.getElementById('exact-duplicates').textContent = exactCount;
         document.getElementById('near-duplicates').textContent = nearCount;
         document.getElementById('output').textContent = JSON.stringify(
-            resultCoords.map((pos, i) => ({ 
+            resultCoords.map((item, i) => ({
                 checked: false,
-                description: "",
-                name: String(i),
-                position: pos 
+                description: item.description,
+                name: String(i), // إعادة الترقيم من 0
+                position: item.position
             })), 
             null, 2
         );
@@ -184,8 +215,8 @@ const copyResults = () => {
     const output = document.getElementById('output').textContent;
     if (output) {
         navigator.clipboard.writeText(output)
-            .then(() => alert('Copied!'))
-            .catch(() => alert('Failed to copy!'));
+            .then(() => alert('تم النسخ بنجاح!'))
+            .catch(() => alert('فشل النسخ!'));
     }
 };
 
@@ -210,11 +241,18 @@ const saveResults = () => {
     link.click();
 };
 
-// الأحداث
-document.getElementById('nearDuplicatesOption').addEventListener('change', function() {
-    document.getElementById('nearDistanceInput').disabled = !this.checked;
-});
+// ربط الأحداث بعد تحميل الصفحة
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('processBtn').addEventListener('click', processData);
+    document.getElementById('clearBtn').addEventListener('click', clearAll);
+    document.getElementById('copyBtn').addEventListener('click', copyResults);
+    document.getElementById('saveBtn').addEventListener('click', saveResults);
 
-document.getElementById('nearDistanceInput').addEventListener('input', function() {
-    additionalNearDistance = Math.max(0, Math.min(50, parseFloat(this.value) || 5));
+    document.getElementById('nearDuplicatesOption').addEventListener('change', function() {
+        document.getElementById('nearDistanceInput').disabled = !this.checked;
+    });
+
+    document.getElementById('nearDistanceInput').addEventListener('input', function() {
+        additionalNearDistance = Math.max(0, Math.min(50, parseFloat(this.value) || 5));
+    });
 });
