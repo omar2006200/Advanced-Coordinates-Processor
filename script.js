@@ -38,22 +38,33 @@ const findNearGroups = (coords, maxDist) => {
     return groups;
 };
 
+// استخراج الإحداثيات من أي نص
+const extractCoordinates = (text) => {
+    const regex = /[-+]?\d*\.?\d+/g;
+    const numbers = text.match(regex)?.map(Number) || [];
+    const coords = [];
+
+    for (let i = 0; i < numbers.length; i += 3) {
+        const x = numbers[i];
+        const y = numbers[i + 1];
+        const z = numbers[i + 2] || 0; // افتراضيًا 0 إذا كانت الإحداثيات ثنائية الأبعاد
+        if (!isNaN(x) && !isNaN(y)) {
+            coords.push([x, y, z]);
+        }
+    }
+
+    return coords;
+};
+
 // معالجة JSON Input
 const parseJSONInput = (jsonInput) => {
     try {
-        const fixedInput = jsonInput
-            .replace(/\s*}\s*{\s*/g, '},{')
-            .replace(/^\s*\[?\s*/, '[')
-            .replace(/\s*\]?\s*$/, ']');
-
-        const jsonArray = JSON.parse(fixedInput);
-        return jsonArray
-            .filter(item => item.position?.length === 3)
-            .map(item => ({
-                name: item.name || "Unnamed",
-                description: item.description || "",
-                position: item.position.map(Number)
-            }));
+        const coords = extractCoordinates(jsonInput);
+        return coords.map((position, index) => ({
+            name: `Point ${index + 1}`,
+            description: "",
+            position
+        }));
     } catch (e) {
         throw new Error(`JSON Error: ${e.message}`);
     }
@@ -122,18 +133,12 @@ const processData = () => {
         // معالجة الإحداثيات النصية
         const textCoords = document.getElementById('coordinatesInput').value.trim();
         if (textCoords) {
-            textCoords.split('\n').forEach((line, idx) => {
-                const coords = line.split(',').map(Number).filter(n => !isNaN(n));
-                if (coords.length === 3) {
-                    allCoords.push({
-                        name: `Point ${idx + 1}`,
-                        description: "",
-                        position: coords
-                    });
-                } else {
-                    errors.push(`Line ${idx + 1}: Invalid format`);
-                }
-            });
+            const coords = extractCoordinates(textCoords);
+            allCoords.push(...coords.map((position, index) => ({
+                name: `Point ${index + 1}`,
+                description: "",
+                position
+            })));
         }
 
         if (errors.length > 0) {
@@ -176,7 +181,8 @@ const processData = () => {
             resultCoords = [
                 ...selected,
                 ...resultCoords.filter(c => 
-                    !nearGroups.some(g => g.some(pos => toKey(pos) === toKey(c.position)))
+                    !nearGroups.some(g => g.some(pos => toKey(pos) === toKey(c.position))
+                )
                 )
             ];
         }
